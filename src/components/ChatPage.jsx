@@ -93,7 +93,7 @@ const ChatPage = () => {
 
     return (
         <ChatContainer>
-            <Header>チャットを始めましょう！</Header>
+            <Header>チャットを開始しましょう！</Header>
             <MessagesContainer>
                 {responses.map((res, index) => (
                     <Message key={index} isUser={index % 2 === 0}>
