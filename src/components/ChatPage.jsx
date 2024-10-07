@@ -83,12 +83,30 @@ const Header = styled.h1`
 const ChatPage = () => {
     const [message, setMessage] = useState('');
     const [responses, setResponses] = useState([]);
+    const [typingResponse, setTypingResponse] = useState(''); // 途中経過表示用
 
     const handleSend = async () => {
         if (!message.trim()) return; // メッセージが空の場合、何もしない
         const response = await sendMessage(message);
         setResponses([...responses, { message, response }]);
         setMessage(''); // メッセージ送信後、入力フィールドをクリア
+        animateTyping(response); // アニメーションを開始
+    };
+
+    // 数文字ずつアニメーションする関数
+    const animateTyping = (responseText) => {
+        setTypingResponse(''); // クリアしてから開始
+        let index = 0;
+        const chunkSize = 3; // 一度に表示する文字数をここで指定（例: 3文字）
+
+        const interval = setInterval(() => {
+            if (index < responseText.length) {
+                setTypingResponse((prev) => prev + responseText.slice(index, index + chunkSize));
+                index += chunkSize; // 一度にchunkSizeだけ追加
+            } else {
+                clearInterval(interval); // 全ての文字を表示したらインターバルをクリア
+            }
+        }, 100); // 100ミリ秒ごとに数文字追加
     };
 
     return (
@@ -101,7 +119,7 @@ const ChatPage = () => {
                             質問: {res.message}
                         </MessageBubble>
                         <MessageBubble isUser={false}>
-                            回答: {res.response}
+                            回答: {index === responses.length - 1 ? typingResponse : res.response}
                         </MessageBubble>
                     </Message>
                 ))}
