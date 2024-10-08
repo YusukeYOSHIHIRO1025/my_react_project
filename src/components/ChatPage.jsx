@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { sendMessage } from '../api/chatAPI';
 import styled from 'styled-components';
 
@@ -42,6 +42,33 @@ const MessageBubble = styled.div`
     font-size: 14px;
 `;
 
+const TypingIndicator = styled.div`
+    font-size: 14px;
+    color: #999;
+    font-style: italic;
+    margin-left: 10px;
+
+    /* グラデーションアニメーションを追加 */
+    background: linear-gradient(90deg, #998, #555, #999);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradientAnimation 2s infinite;
+    
+    @keyframes gradientAnimation {
+        0% {
+            background-position: 0% 50%;
+        }
+        50% {
+            background-position: 100% 50%;
+        }
+        100% {
+            background-position: 0% 50%;
+        }
+    }
+
+    background-size: 200% 200%;
+`;
+
 const InputContainer = styled.div`
     display: flex;
     padding: 10px;
@@ -82,14 +109,38 @@ const Header = styled.h1`
 const ChatPage = () => {
     const [message, setMessage] = useState('');
     const [responses, setResponses] = useState([]);
+    const [currentResponse, setCurrentResponse] = useState('');
+    const [typingResponse, setTypingResponse] = useState('');
+    const [isTyping, setIsTyping] = useState(false);
+    const [loading, setLoading] = useState(false); // ローディング状態を管理
+
+    useEffect(() => {
+        if (currentResponse && isTyping) {
+            let charIndex = 0;
+            const intervalId = setInterval(() => {
+                setTypingResponse((prev) => prev + currentResponse[charIndex]);
+                charIndex += 1;
+                if (charIndex >= currentResponse.length) {
+                    clearInterval(intervalId);
+                    setIsTyping(false);
+                    setTypingResponse(''); // 初期化
+                    setResponses(prevResponses => [...prevResponses, { message: currentResponse, isUser: false }]);
+                    setLoading(false); // ローディング終了
+                }
+            }, 50); // 50msごとに一文字を追加
+            return () => clearInterval(intervalId);
+        }
+    }, [currentResponse, isTyping]);
 
     const handleSend = async () => {
         if (!message.trim()) return; // メッセージが空の場合、何もしない
         // ユーザーメッセージを追加
         setResponses([...responses, { message, isUser: true }]);
+        setLoading(true); // ローディング開始
         const response = await sendMessage(message);
-        // AIのレスポンスを追加
-        setResponses(prevResponses => [...prevResponses, { message: response, isUser: false }]);
+        // AIのレスポンスを設定し、一文字ずつ表示開始
+        setCurrentResponse(response);
+        setIsTyping(true);
         setMessage(''); // メッセージ送信後、入力フィールドをクリア
     };
 
@@ -104,6 +155,19 @@ const ChatPage = () => {
                         </MessageBubble>
                     </Message>
                 ))}
+                {isTyping && (
+                    <Message isUser={false}>
+                        <MessageBubble isUser={false}>
+                            回答: {typingResponse}
+                        </MessageBubble>
+                    </Message>
+                )}
+                {/* ローディング中に "typing..." を表示 */}
+                {loading && (
+                    <TypingIndicator>
+                        回答中...
+                    </TypingIndicator>
+                )}
             </MessagesContainer>
             <InputContainer>
                 <InputField
